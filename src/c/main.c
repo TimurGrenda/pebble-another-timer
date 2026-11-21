@@ -773,6 +773,13 @@ static void alarm_stop(ClickRecognizerRef rec, void *ctx) {
     reload_ui();
   }
   if (show_next_pending_alarm()) { return; }
+  // Local mod: Stop honours "Return to watchface -> After stopping a timer"
+  // again (pre-a00478f behaviour). +1 Min / Overtime keep upstream behaviour.
+  if (s_auto_return_stop) {
+    s_alarm_from_wakeup_launch = false;
+    close_to_watchface();
+    return;
+  }
   alarm_dismiss_tail();
 }
 
