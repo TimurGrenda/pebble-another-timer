@@ -354,3 +354,10 @@ header, which doesn't share `ml_draw_detail_line()`'s guard against this).
   build_functional_test_image` builds the image). Any CI job for this
   project must call `make test_functional_golden`, not `run_sequence.sh
   --no-container`.
+
+## Fork
+
+This checkout is a fork of `truhanen/pebble-another-timer`. Work on the
+`custom` branch, never commit to `master` (pristine upstream mirror). See
+`FORK.md` for the branch layout, the list of local changes, and
+`scripts/sync-upstream.sh` for rebasing onto upstream.
