@@ -3727,6 +3727,64 @@ static void empty_hint_update_proc(Layer *layer, GContext *gctx) {
   graphics_draw_text(gctx, msg, f, hint, GTextOverflowModeWordWrap, GTextAlignmentLeft, NULL);
 }
 
+// ---- wrap-around UP/DOWN in the main list ----
+// UP on the top item ("+ New timer") jumps to the last timer; DOWN on the last
+// timer jumps back to "+ New timer". Only on a fresh press: while a button is
+// held (repeating), scrolling stops at the edge as before, so a long hold
+// doesn't spin through the list endlessly.
+static ClickConfigProvider s_menu_orig_ccp;
+
+static void ml_jump_to_item(int16_t next_selected) {
+  if (!s_menu) { return; }
+  s_menu_selected_timer_idx = next_selected;
+  int target_row = (next_selected == -1)
+    ? ml_row_for_new(next_selected)
+    : ml_row_for_timer_primary(next_selected, next_selected);
+  if (target_row < 0) { return; }
+  s_menu_internal_selection = true;
+  menu_layer_set_selected_index(s_menu, (MenuIndex){ .section = 0, .row = (uint16_t)target_row },
+                                MenuRowAlignNone, false);
+  s_menu_internal_selection = false;
+  int to_y = 0, to_h = 0;
+  if (ml_block_for_selection(next_selected, &to_y, &to_h)) {
+    s_menu_visual_y = (int16_t)to_y;
+    s_menu_visual_h = (int16_t)to_h;
+    s_menu_visual_valid = true;
+    menu_layer_reload_data(s_menu);
+    ml_scroll_item_bounds_into_view(to_y, to_h);
+  } else {
+    menu_layer_reload_data(s_menu);
+  }
+  if (s_empty_hint_layer) { layer_mark_dirty(s_empty_hint_layer); }
+}
+
+static void ml_wrap_up_click(ClickRecognizerRef r, void *ctx) {
+  if (!s_menu) { return; }
+  if (!click_recognizer_is_repeating(r) && s_count > 0 && s_menu_selected_timer_idx == -1) {
+    idle_reset();
+    ml_jump_to_item((int16_t)s_order[s_count - 1]);
+    return;
+  }
+  menu_layer_set_selected_next(s_menu, true, MenuRowAlignCenter, true);   // stock MenuLayer behaviour
+}
+
+static void ml_wrap_down_click(ClickRecognizerRef r, void *ctx) {
+  if (!s_menu) { return; }
+  if (!click_recognizer_is_repeating(r) && s_count > 0 &&
+      s_menu_selected_timer_idx == (int16_t)s_order[s_count - 1]) {
+    idle_reset();
+    ml_jump_to_item(-1);
+    return;
+  }
+  menu_layer_set_selected_next(s_menu, false, MenuRowAlignCenter, true);  // stock MenuLayer behaviour
+}
+
+static void ml_wrap_click_config(void *ctx) {
+  if (s_menu_orig_ccp) { s_menu_orig_ccp(ctx); }   // MenuLayer's own SELECT/long-SELECT/BACK etc.
+  window_single_repeating_click_subscribe(BUTTON_ID_UP, 100 /*ms*/, ml_wrap_up_click);
+  window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 100 /*ms*/, ml_wrap_down_click);
+}
+
 // ---- window ----
 static void window_load(Window *w) {
   rebuild_order();
@@ -3744,6 +3802,8 @@ static void window_load(Window *w) {
     .selection_changed = ml_selection_changed,
   });
   menu_layer_set_click_config_onto_window(s_menu, w);
+  s_menu_orig_ccp = window_get_click_config_provider(w);
+  window_set_click_config_provider_with_context(w, ml_wrap_click_config, window_get_click_config_context(w));
   layer_add_child(root, menu_layer_get_layer(s_menu));
   s_empty_hint_layer = layer_create(menu_bounds);
   layer_set_update_proc(s_empty_hint_layer, empty_hint_update_proc);
