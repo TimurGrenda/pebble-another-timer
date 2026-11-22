@@ -3746,8 +3746,19 @@ static void window_load(Window *w) {
   layer_add_child(root, s_main_bottom_bar_layer);
   s_menu_selected_timer_idx = (s_count > 0) ? s_order[0] : -1;
   s_menu_visual_valid = false;
+  // Put the MenuLayer's own cursor on the same row as the logical selection.
+  // Row 0 is "+ New timer", so the first timer's primary row is row 1 - leaving
+  // the cursor on row 0 while the highlight shows the first timer made the
+  // first DOWN press a no-op (0 -> 1 lands on the already-selected timer).
+  // While a timer runs, tick_cb's reload_ui() re-anchors it within a second,
+  // which is why this only showed up with nothing running.
+  int initial_row = (s_menu_selected_timer_idx == -1)
+    ? ml_row_for_new(s_menu_selected_timer_idx)
+    : ml_row_for_timer_primary(s_menu_selected_timer_idx, s_menu_selected_timer_idx);
+  if (initial_row < 0) { initial_row = 0; }
   s_menu_internal_selection = true;
-  menu_layer_set_selected_index(s_menu, (MenuIndex){ .section = 0, .row = 0 }, MenuRowAlignTop, false);
+  menu_layer_set_selected_index(s_menu, (MenuIndex){ .section = 0, .row = (uint16_t)initial_row },
+                                MenuRowAlignNone, false);
   s_menu_internal_selection = false;
   int y = 0, h = 0;
   if (ml_block_for_selection(s_menu_selected_timer_idx, &y, &h)) {
