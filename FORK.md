@@ -22,6 +22,7 @@ dropped, reworded or sent upstream as a PR on its own.
 | `CHORE: Add fork notes and upstream sync script`       | This file and `scripts/sync-upstream.sh`.                                                                                          |
 | `FIX: Alarm Stop honours AutoReturnStop again`         | Stop on the alarm screen returns to the watchface when "Return to watchface -> After stopping a timer" is on (behaviour before upstream a00478f). +1 Min / Overtime keep upstream behaviour. |
 | `FEAT: Wrap-around UP/DOWN in the main timer list`     | UP on "+ New timer" jumps to the last timer; DOWN on the last timer jumps to "+ New timer". Fresh presses only; held repeat stops at the edge. |
+| `FIX: First UP/DOWN press after launch is a no-op`      | On launch the MenuLayer cursor sat on row 0 ("+ New timer") while the highlight showed the first timer, so the first UP/DOWN did nothing when no timer was running (a running timer's 1 s tick re-synced it). Upstream bug. |
 
 Keep this table up to date when adding or dropping a fork commit.
 
